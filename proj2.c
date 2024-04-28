@@ -37,6 +37,7 @@ ARGUMENTS_T Arguments;
 
 
 void fprintf_flush(FILE *stream, const char *format, ...) {
+    sem_wait(printing);
     (*numberOfCodeLines)++;
     va_list args;
     va_start(args, format);
@@ -44,6 +45,7 @@ void fprintf_flush(FILE *stream, const char *format, ...) {
     vfprintf(stream, format, args);
     va_end(args);
     fflush(stream);
+    sem_post(printing);
 }
 
 void init_semaphores(void) {
@@ -70,7 +72,7 @@ void init_semaphores(void) {
     mutex = sem_open(MAIN_PROCESS_SEM, O_CREAT, 0666, 1);
     bus = sem_open(BUS_SEM, O_CREAT, 0666, 0);
     boarded = sem_open(BOARDING_SEM, O_CREAT, 0666, 0);
-    printing = sem_open(PRINTING_SEM, O_CREAT, 0666, 0);
+    printing = sem_open(PRINTING_SEM, O_CREAT, 0666, 1);
 
     if (mutex == SEM_FAILED || bus == SEM_FAILED || boarded == SEM_FAILED) {
         fprintf(stderr, "Could not initialize semaphores\n");
