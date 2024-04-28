@@ -101,8 +101,9 @@ void cleanup(void) {
 
     sem_unlink(MAIN_PROCESS_SEM);
     sem_unlink(BUS_SEM);
-    sem_unlink(MULTIPLEX_SEM);
-    sem_unlink(ALL_ABOARD_SEM);
+    sem_unlink("boarded");
+    sem_unlink("printing");
+    sem_unlink("leave");
     fclose(f);
 }
 
