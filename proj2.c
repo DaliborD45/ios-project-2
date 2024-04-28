@@ -35,7 +35,7 @@ typedef struct {
 
 ARGUMENTS_T Arguments;
 
-
+/*Helper function that prints to file and flushes it*/
 void fprintf_flush(FILE *stream, const char *format, ...) {
     sem_wait(printing);
     (*numberOfCodeLines)++;
@@ -48,6 +48,10 @@ void fprintf_flush(FILE *stream, const char *format, ...) {
     sem_post(printing);
 }
 
+/*
+ * @brief function that initializes semaphores and allocated shared memory
+ */
+
 void init_semaphores(void) {
     currentBusStop = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfGoneSkiers = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
@@ -57,10 +61,13 @@ void init_semaphores(void) {
     boardedPeople = (int *) mmap(NULL, sizeof(int) * Arguments.busCapacity, PROT_READ | PROT_WRITE,
                                  MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfCodeLines = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+
     if (currentBusStop == MAP_FAILED || numberOfGoneSkiers == MAP_FAILED) {
         fprintf(stderr, "Could not initialize shared memory\n");
         exit(1);
     }
+    /* assigns initial values to shared memory */
+
     for (int i = 0; i < Arguments.numberOfBusStops + 1; i++) {
         numberOfPeopleOnEachBusStop[i] = 0;
     }
@@ -80,9 +87,11 @@ void init_semaphores(void) {
     }
 
 }
+/*
+ * @brief Close and unlink semaphores
+ */
 
 void cleanup(void) {
-    /* Close and unlink semaphores */
     munmap(currentBusStop, sizeof(int));
     munmap(numberOfGoneSkiers, sizeof(int));
     munmap(numberOfPeopleOnEachBusStop, sizeof(int) * Arguments.numberOfBusStops);
@@ -104,12 +113,20 @@ void cleanup(void) {
     fclose(f);
 }
 
-
+/*
+ * @brief Function that generates random number between min and max
+ * @param min minimum number
+ * @param max maximum number
+ */
 void randusleep(int min, int max) {
     usleep(rand() % (max - min + 1) + min);
 }
 
-
+/*
+ * @brief Function that validates input arguments
+ * @param numberOfArguments number of arguments
+ * @param arguments array of arguments
+ */
 void validateInput(int numberOfArguments, char *arguments[]) {
     if (numberOfArguments != 6) {
         fprintf(stderr, "you have provided wrong number of arguments\n");
@@ -151,6 +168,10 @@ void validateInput(int numberOfArguments, char *arguments[]) {
     }
 
 }
+/*
+ * @brief This function creates a buss process and handles the bus arrival and departure
+ * it also handles the skiers departure to the ski
+ */
 
 void process_bus(void) {
     fprintf_flush(f, "BUS: started\n");
@@ -207,6 +228,10 @@ void process_skier(int skierID) {
 
 }
 
+/*
+ * @brief This function generates skier processes, sleep function ensures that the skiers are generated in random order
+ */
+
 void generateSkiers(void) {
     for (int i = 1; i <= Arguments.numberOfSkiers; i++) {
         pid_t SKIER = fork();
@@ -224,10 +249,13 @@ void generateSkiers(void) {
     }
 }
 
+/*
+ * @brief Main function that handles the main process
+ */
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
-    //  OPEN | CREATE file
+    /* open file  for output*/
     if ((f = fopen(OUTPUT_FILENAME, "w")) == NULL) {
         fprintf(stderr, "File can't be opened: ");
         exit(1);
@@ -246,8 +274,9 @@ int main(int argc, char *argv[]) {
     } else {
         generateSkiers();
     }
-
+    /* wait for all processes to finish */
     while (wait(NULL) > 0);
+
     cleanup();
     return 0;
 }
