@@ -68,7 +68,6 @@ void init_semaphores(void) {
     *numberOfGoneSkiers = 0;
     *numberOfCodeLines = 0;
     mutex = sem_open(MAIN_PROCESS_SEM, O_CREAT, 0666, 1);
-
     bus = sem_open(BUS_SEM, O_CREAT, 0666, 0);
     boarded = sem_open("boarded", O_CREAT, 0666, 0);
     printing = sem_open("printing", O_CREAT, 0666, 0);
@@ -161,6 +160,7 @@ void process_bus(void) {
         usleep(100);
         fprintf_flush(f, "BUS: arrived to %d\n", *currentBusStop);
         sem_wait(mutex);
+        printf("Number of people on bus stop %d is %d\n", *currentBusStop, numberOfPeopleOnEachBusStop[*currentBusStop]);
         for (int i = 0; i < numberOfPeopleOnEachBusStop[*currentBusStop]; i++) {
             sem_post(bus);
             sem_wait(boarded);
@@ -181,10 +181,12 @@ void process_bus(void) {
 
 
 void process_skier(int skierID) {
+    sem_wait(mutex);
     int generatedSkierBusStop = (rand() % ((Arguments.numberOfBusStops - 1))) + 1;
-
     fprintf_flush(f, "L %d: arrived to %d\n", skierID, generatedSkierBusStop);
     numberOfPeopleOnEachBusStop[generatedSkierBusStop] += 1;
+    sem_post(mutex);
+
     sem_wait(bus);
     if (generatedSkierBusStop == *currentBusStop) {
         fprintf_flush(f, "L %d: boarding\n", skierID);
@@ -192,8 +194,6 @@ void process_skier(int skierID) {
     sem_post(boarded);
     sem_trywait(leave);
     if (*currentBusStop == Arguments.numberOfBusStops) {
-        printf("this is triggered");
-        fflush(stdout);
         fprintf_flush(f, "L %d: is going to ski\n", skierID);
         *numberOfGoneSkiers += 1;
     }
