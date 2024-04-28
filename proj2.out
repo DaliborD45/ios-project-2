@@ -1,0 +1,52 @@
+BUS: started
+L 1: arrived to 8
+L 2: arrived to 8
+BUS: arrived to 1
+BUS: leaving 1
+L 3: arrived to 8
+L 4: arrived to 8
+L 5: arrived to 8
+L 6: arrived to 8
+L 8: arrived to 8
+L 7: arrived to 8
+L 9: arrived to 8
+L 10: arrived to 8
+BUS: arrived to 2
+BUS: leaving 2
+BUS: arrived to 3
+BUS: leaving 3
+BUS: arrived to 4
+BUS: leaving 4
+BUS: arrived to 5
+BUS: leaving 5
+BUS: arrived to 6
+BUS: leaving 6
+BUS: arrived to 7
+BUS: leaving 7
+BUS: arrived to 8
+L 1: boarding
+L 2: boarding
+L 3: boarding
+L 4: boarding
+L 5: boarding
+L 6: boarding
+L 8: boarding
+L 7: boarding
+L 9: boarding
+L 10: boarding
+BUS: leaving 8
+BUS: arrived to 9
+BUS: leaving 9
+BUS: arrived to 10
+L 1: is going to ski
+L 2: is going to ski
+L 3: is going to ski
+L 4: is going to ski
+L 5: is going to ski
+L 6: is going to ski
+L 8: is going to ski
+L 7: is going to ski
+L 9: is going to ski
+L 10: is going to ski
+BUS: leaving 10
+BUS: finished

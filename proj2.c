@@ -5,7 +5,7 @@
  * @author Dalibor Detko
 ***************************/
 
-#include "main.h"
+#include "proj2.h"
 #include <stdarg.h>
 
 /* SHARED MEMORY */
@@ -23,6 +23,8 @@ sem_t *printing = NULL;
 /*FILE*/
 FILE *f;
 
+
+/*Structure that stores all my parameters*/
 typedef struct {
     int numberOfSkiers;
     int numberOfBusStops;
@@ -163,7 +165,7 @@ void process_bus(void) {
         }
         if (*currentBusStop == Arguments.numberOfBusStops) {
             for (int i = 0; i<*numberOfBoardedPeople;i++){
-                fprintf_flush(f, "L %d: is going to ski\n", boardedPeople[i]);
+                fprintf_flush(f, "L %d: going to ski\n", boardedPeople[i]);
                 (*numberOfGoneSkiers) += 1;
 
             }
@@ -192,7 +194,7 @@ void process_skier(int skierID) {
     sem_post(mutex);
 
     sem_wait(bus);
-    if (generatedSkierBusStop == *currentBusStop) {
+    if (generatedSkierBusStop == *currentBusStop && (*currentBusStop)<=Arguments.busCapacity) {
         fprintf_flush(f, "L %d: boarding\n", skierID);
         boardedPeople[*numberOfBoardedPeople] = skierID;
         *numberOfBoardedPeople += 1;
