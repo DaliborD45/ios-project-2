@@ -13,6 +13,8 @@ int *numberOfCodeLines;
 int *currentBusStop;
 int *numberOfGoneSkiers;
 int *numberOfPeopleOnEachBusStop;
+int *numberOfBoardedPeople;
+int *boardedPeople;
 /* SEMAPHORES */
 sem_t *mutex = NULL;
 sem_t *bus = NULL;
@@ -54,6 +56,8 @@ void init_semaphores(void) {
     numberOfGoneSkiers = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfPeopleOnEachBusStop = (int *) mmap(NULL, sizeof(int) * Arguments.numberOfBusStops, PROT_READ | PROT_WRITE,
                                                MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    numberOfBoardedPeople = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    boardedPeople = (int *) mmap(NULL, sizeof(int) * Arguments.busCapacity, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfCodeLines = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     if (currentBusStop == MAP_FAILED || numberOfGoneSkiers == MAP_FAILED) {
         fprintf(stderr, "Could not initialize shared memory\n");
@@ -62,9 +66,11 @@ void init_semaphores(void) {
     for (int i = 0; i < Arguments.numberOfBusStops + 1; i++) {
         numberOfPeopleOnEachBusStop[i] = 0;
     }
+
     *currentBusStop = 1;
     *numberOfGoneSkiers = 0;
     *numberOfCodeLines = 0;
+    *numberOfBoardedPeople = 0;
     mutex = sem_open(MAIN_PROCESS_SEM, O_CREAT, 0666, 1);
     bus = sem_open(BUS_SEM, O_CREAT, 0666, 0);
     boarded = sem_open("boarded", O_CREAT, 0666, 0);
@@ -157,17 +163,27 @@ void process_bus(void) {
     while (*numberOfGoneSkiers != Arguments.numberOfSkiers) {
         int waitTime = rand() % Arguments.maxBusDriveTime;
         randusleep(0, waitTime);;
-        fprintf_flush(f, "BUS: arrived to %d\n", *currentBusStop);
+        printf("this is before mutex in bus %d\n", *currentBusStop);
         sem_wait(mutex);
-        printf("Number of people on bus stop %d is %d\n", *currentBusStop, numberOfPeopleOnEachBusStop[*currentBusStop]);
+        fprintf_flush(f, "BUS: arrived to %d\n", *currentBusStop);
+        int waiting = 0;
         for (int i = 0; i < numberOfPeopleOnEachBusStop[*currentBusStop]; i++) {
             sem_post(bus);
             sem_wait(boarded);
-            if (*currentBusStop == Arguments.numberOfBusStops) {
-                sem_post(leave);
-            }
+
+            waiting++;
         }
-        numberOfPeopleOnEachBusStop[*currentBusStop] = 0;
+        if (*currentBusStop == Arguments.numberOfBusStops) {
+            for (int i = 0; i<*numberOfBoardedPeople;i++){
+                fprintf_flush(f, "L %d: is going to ski\n", boardedPeople[i]);
+                (*numberOfGoneSkiers) += 1;
+
+            }
+            (*numberOfBoardedPeople) = 0;
+        }
+        numberOfPeopleOnEachBusStop[*currentBusStop] -= waiting;
+        printf("this is after mutex");
+        fflush(stdout);
         sem_post(mutex);
         fprintf_flush(f, "BUS: leaving %d\n", *currentBusStop);
         *currentBusStop += 1;
@@ -189,13 +205,10 @@ void process_skier(int skierID) {
     sem_wait(bus);
     if (generatedSkierBusStop == *currentBusStop) {
         fprintf_flush(f, "L %d: boarding\n", skierID);
+        boardedPeople[*numberOfBoardedPeople] = skierID;
+        *numberOfBoardedPeople += 1;
     }
     sem_post(boarded);
-    sem_wait(leave);
-    if (*currentBusStop == Arguments.numberOfBusStops) {
-        fprintf_flush(f, "L %d: is going to ski\n", skierID);
-        *numberOfGoneSkiers += 1;
-    }
 
 }
 
@@ -203,21 +216,22 @@ void generateSkiers(void) {
     for (int i = 1; i <= Arguments.numberOfSkiers; i++) {
         pid_t SKIER = fork();
         if (SKIER == 0) {
+            usleep(200);
+            printf("Skier %d\n", i);
+            fflush(stdout);
             process_skier(i);
         } else if (SKIER < 0) {
             fprintf(stderr, "Could not fork process\n");
             kill(0, SIGKILL);
-//            cleanUp();
+            cleanup();
             exit(1);
         }
-        int waitTime = rand() % Arguments.maxSkierWaitTime;
-
-        randusleep(0, waitTime);
     }
 }
 
 
 int main(int argc, char *argv[]) {
+    cleanup();
     srand(time(NULL));
     //  OPEN | CREATE file
     if ((f = fopen(OUTPUT_FILENAME, "w")) == NULL) {
@@ -237,6 +251,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     else {
+        printf("this function is called generateSkiers");
+        fflush(stdout);
         generateSkiers();
     }
     while (wait(NULL) > 0);
