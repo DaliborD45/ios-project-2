@@ -163,7 +163,6 @@ void process_bus(void) {
     while (*numberOfGoneSkiers != Arguments.numberOfSkiers) {
         int waitTime = rand() % Arguments.maxBusDriveTime;
         randusleep(0, waitTime);;
-        printf("this is before mutex in bus %d\n", *currentBusStop);
         sem_wait(mutex);
         fprintf_flush(f, "BUS: arrived to %d\n", *currentBusStop);
         int waiting = 0;
@@ -182,7 +181,6 @@ void process_bus(void) {
             (*numberOfBoardedPeople) = 0;
         }
         numberOfPeopleOnEachBusStop[*currentBusStop] -= waiting;
-        printf("this is after mutex");
         fflush(stdout);
         sem_post(mutex);
         fprintf_flush(f, "BUS: leaving %d\n", *currentBusStop);
@@ -192,6 +190,8 @@ void process_bus(void) {
         }
     }
     fprintf_flush(f, "BUS: finished\n");
+    exit(0);
+
 }
 
 
@@ -216,10 +216,10 @@ void generateSkiers(void) {
     for (int i = 1; i <= Arguments.numberOfSkiers; i++) {
         pid_t SKIER = fork();
         if (SKIER == 0) {
-            usleep(200);
-            printf("Skier %d\n", i);
             fflush(stdout);
             process_skier(i);
+            randusleep(0, Arguments.maxSkierWaitTime);
+            exit(0);
         } else if (SKIER < 0) {
             fprintf(stderr, "Could not fork process\n");
             kill(0, SIGKILL);
@@ -231,7 +231,6 @@ void generateSkiers(void) {
 
 
 int main(int argc, char *argv[]) {
-    cleanup();
     srand(time(NULL));
     //  OPEN | CREATE file
     if ((f = fopen(OUTPUT_FILENAME, "w")) == NULL) {
@@ -251,10 +250,9 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     else {
-        printf("this function is called generateSkiers");
-        fflush(stdout);
         generateSkiers();
     }
+
     while (wait(NULL) > 0);
     cleanup();
     return 0;
