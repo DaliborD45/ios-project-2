@@ -19,9 +19,7 @@ int *boardedPeople;
 sem_t *mutex = NULL;
 sem_t *bus = NULL;
 sem_t *boarded = NULL;
-sem_t *generator = NULL;
 sem_t *printing = NULL;
-sem_t *leave = NULL;
 /*FILE*/
 FILE *f;
 
@@ -35,12 +33,7 @@ typedef struct {
 
 ARGUMENTS_T Arguments;
 
-void checkSemaphoreError(int isOpen) {
-    if (!isOpen) {
-        fprintf(stderr, "Could not initialize MAIN_PROCESS_SEM");
-        exit(1);
-    }
-}
+
 
 void fprintf_flush(FILE *stream, const char *format, ...) {
     (*numberOfCodeLines)++;
@@ -73,11 +66,10 @@ void init_semaphores(void) {
     *numberOfBoardedPeople = 0;
     mutex = sem_open(MAIN_PROCESS_SEM, O_CREAT, 0666, 1);
     bus = sem_open(BUS_SEM, O_CREAT, 0666, 0);
-    boarded = sem_open("boarded", O_CREAT, 0666, 0);
-    printing = sem_open("printing", O_CREAT, 0666, 0);
-    leave = sem_open("leave", O_CREAT, 0666, 0);
+    boarded = sem_open(BOARDING_SEM, O_CREAT, 0666, 0);
+    printing = sem_open(PRINTING_SEM, O_CREAT, 0666, 0);
 
-    if (mutex == SEM_FAILED || bus == SEM_FAILED || boarded == SEM_FAILED || generator == SEM_FAILED) {
+    if (mutex == SEM_FAILED || bus == SEM_FAILED || boarded == SEM_FAILED) {
         fprintf(stderr, "Could not initialize semaphores\n");
         exit(1);
     }
@@ -88,25 +80,22 @@ void cleanup(void) {
     /* Close and unlink semaphores */
     munmap(currentBusStop, sizeof(int));
     munmap(numberOfGoneSkiers, sizeof(int));
-//    if (munmap(MAIN_PROCESS_SEM, sizeof(int)) == -1 || munmap(BUS_SEM, sizeof(int)) == -1 ||
-//        munmap(MULTIPLEX_SEM, sizeof(int)) == -1 || munmap(ALL_ABOARD_SEM, sizeof(int)) == -1) {
-//        fprintf(stderr, "Could not delete shared memory\n");
-//        exit(1);
-//    }
+    munmap(numberOfPeopleOnEachBusStop, sizeof(int) * Arguments.numberOfBusStops);
+    munmap(numberOfBoardedPeople, sizeof(int));
+    munmap(boardedPeople, sizeof(int) * Arguments.busCapacity);
+    munmap(numberOfCodeLines, sizeof(int));
+
 
     sem_close(mutex);
     sem_close(bus);
     sem_close(boarded);
-    sem_close(generator);
     sem_close(printing);
-    sem_close(leave);
 
 
     sem_unlink(MAIN_PROCESS_SEM);
     sem_unlink(BUS_SEM);
-    sem_unlink("boarded");
-    sem_unlink("printing");
-    sem_unlink("leave");
+    sem_unlink(BOARDING_SEM);
+    sem_unlink(PRINTING_SEM);
     fclose(f);
 }
 

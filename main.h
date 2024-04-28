@@ -13,6 +13,6 @@
 #include <signal.h>
 #define OUTPUT_FILENAME "proj2.out"
 #define MAIN_PROCESS_SEM "xdetkod00_mutex"
-#define MULTIPLEX_SEM "xdetkod00_multiplex"
+#define PRINTING_SEM "xdetkod00_printing"
 #define BUS_SEM "xdetkod00_bus"
-#define ALL_ABOARD_SEM "xdetkod00_all_aboard"
+#define BOARDING_SEM "xdetkod00_boarding"
