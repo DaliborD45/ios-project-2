@@ -41,14 +41,12 @@ void checkSemaphoreError(int isOpen) {
 }
 
 void fprintf_flush(FILE *stream, const char *format, ...) {
-    sem_post(printing);
     (*numberOfCodeLines)++;
     va_list args;
     va_start(args, format);
     vfprintf(stream, format, args);
     va_end(args);
     fflush(stream);
-    sem_trywait(printing);
 }
 
 void init_semaphores(void) {
@@ -82,8 +80,8 @@ void init_semaphores(void) {
 
 void cleanup(void) {
     /* Close and unlink semaphores */
-//    munmap(currentBusStop, sizeof(int));
-//    munmap(numberOfGoneSkiers, sizeof(int));
+    munmap(currentBusStop, sizeof(int));
+    munmap(numberOfGoneSkiers, sizeof(int));
 //    if (munmap(MAIN_PROCESS_SEM, sizeof(int)) == -1 || munmap(BUS_SEM, sizeof(int)) == -1 ||
 //        munmap(MULTIPLEX_SEM, sizeof(int)) == -1 || munmap(ALL_ABOARD_SEM, sizeof(int)) == -1) {
 //        fprintf(stderr, "Could not delete shared memory\n");
@@ -157,7 +155,8 @@ void validateInput(int numberOfArguments, char *arguments[]) {
 void process_bus(void) {
     fprintf_flush(f, "BUS: started\n");
     while (*numberOfGoneSkiers != Arguments.numberOfSkiers) {
-        usleep(100);
+        int waitTime = rand() % Arguments.maxBusDriveTime;
+        randusleep(0, waitTime);;
         fprintf_flush(f, "BUS: arrived to %d\n", *currentBusStop);
         sem_wait(mutex);
         printf("Number of people on bus stop %d is %d\n", *currentBusStop, numberOfPeopleOnEachBusStop[*currentBusStop]);
@@ -192,7 +191,7 @@ void process_skier(int skierID) {
         fprintf_flush(f, "L %d: boarding\n", skierID);
     }
     sem_post(boarded);
-    sem_trywait(leave);
+    sem_wait(leave);
     if (*currentBusStop == Arguments.numberOfBusStops) {
         fprintf_flush(f, "L %d: is going to ski\n", skierID);
         *numberOfGoneSkiers += 1;
@@ -214,7 +213,6 @@ void generateSkiers(void) {
         int waitTime = rand() % Arguments.maxSkierWaitTime;
 
         randusleep(0, waitTime);
-        usleep(100);
     }
 }
 
