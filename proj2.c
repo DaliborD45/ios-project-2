@@ -36,11 +36,11 @@ typedef struct {
 ARGUMENTS_T Arguments;
 
 
-
 void fprintf_flush(FILE *stream, const char *format, ...) {
     (*numberOfCodeLines)++;
     va_list args;
     va_start(args, format);
+    fprintf(stream, "%d: ", *numberOfCodeLines);
     vfprintf(stream, format, args);
     va_end(args);
     fflush(stream);
@@ -52,7 +52,8 @@ void init_semaphores(void) {
     numberOfPeopleOnEachBusStop = (int *) mmap(NULL, sizeof(int) * Arguments.numberOfBusStops, PROT_READ | PROT_WRITE,
                                                MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfBoardedPeople = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-    boardedPeople = (int *) mmap(NULL, sizeof(int) * Arguments.busCapacity, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    boardedPeople = (int *) mmap(NULL, sizeof(int) * Arguments.busCapacity, PROT_READ | PROT_WRITE,
+                                 MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     numberOfCodeLines = (int *) mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     if (currentBusStop == MAP_FAILED || numberOfGoneSkiers == MAP_FAILED) {
         fprintf(stderr, "Could not initialize shared memory\n");
@@ -163,24 +164,25 @@ void process_bus(void) {
 
             waiting++;
         }
-        if (*currentBusStop == Arguments.numberOfBusStops) {
-            for (int i = 0; i<*numberOfBoardedPeople;i++){
-                fprintf_flush(f, "L %d: going to ski\n", boardedPeople[i]);
-                (*numberOfGoneSkiers) += 1;
 
-            }
-            (*numberOfBoardedPeople) = 0;
-        }
         numberOfPeopleOnEachBusStop[*currentBusStop] -= waiting;
         fflush(stdout);
         sem_post(mutex);
         fprintf_flush(f, "BUS: leaving %d\n", *currentBusStop);
         *currentBusStop += 1;
         if (*currentBusStop > Arguments.numberOfBusStops) {
+            fprintf_flush(f,"BUS: arrived to final\n");
+            for (int i = 0; i < *numberOfBoardedPeople; i++) {
+                fprintf_flush(f, "L %d: going to ski\n", boardedPeople[i]);
+                (*numberOfGoneSkiers) += 1;
+
+            }
+            fprintf_flush(f, "BUS: leaving final\n");
+            (*numberOfBoardedPeople) = 0;
             *currentBusStop = 1;
         }
     }
-    fprintf_flush(f, "BUS: finished\n");
+    fprintf_flush(f, "BUS: finish\n");
     exit(0);
 
 }
@@ -188,13 +190,13 @@ void process_bus(void) {
 
 void process_skier(int skierID) {
     sem_wait(mutex);
-    int generatedSkierBusStop = (rand() % ((Arguments.numberOfBusStops - 1))) + 1;
+    int generatedSkierBusStop = (rand() % ((Arguments.numberOfBusStops))) + 1;
     fprintf_flush(f, "L %d: arrived to %d\n", skierID, generatedSkierBusStop);
     numberOfPeopleOnEachBusStop[generatedSkierBusStop] += 1;
     sem_post(mutex);
 
     sem_wait(bus);
-    if (generatedSkierBusStop == *currentBusStop && (*currentBusStop)<=Arguments.busCapacity) {
+    if (generatedSkierBusStop == *currentBusStop && (*currentBusStop) <= Arguments.busCapacity) {
         fprintf_flush(f, "L %d: boarding\n", skierID);
         boardedPeople[*numberOfBoardedPeople] = skierID;
         *numberOfBoardedPeople += 1;
@@ -207,7 +209,7 @@ void generateSkiers(void) {
     for (int i = 1; i <= Arguments.numberOfSkiers; i++) {
         pid_t SKIER = fork();
         if (SKIER == 0) {
-            fflush(stdout);
+            fprintf_flush(f, "L %d: started\n", i);
             process_skier(i);
             randusleep(0, Arguments.maxSkierWaitTime);
             exit(0);
@@ -235,12 +237,11 @@ int main(int argc, char *argv[]) {
 
     if (BUS == 0) {
         process_bus();
-    }else if(BUS < 0){
+    } else if (BUS < 0) {
         fprintf(stderr, "Could not fork process\n");
         kill(0, SIGKILL);
         exit(1);
-    }
-    else {
+    } else {
         generateSkiers();
     }
 

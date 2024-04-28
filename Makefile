@@ -1,5 +1,5 @@
 make:
-	gcc -std=gnu99 -pedantic -lpthread -lrt -o proj2 proj2.c
+	gcc -std=gnu99 -pedantic -lpthread -ltr -o proj2 proj2.c
 
 clean:
 	rm -f proj2.out
